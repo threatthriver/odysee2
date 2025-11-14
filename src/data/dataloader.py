@@ -6,6 +6,7 @@ from typing import Tuple, Dict, Optional, Callable
 
 import torch
 from torch.utils.data import DataLoader, Dataset, random_split
+from torch.utils.data.distributed import DistributedSampler
 from torchvision import transforms, datasets
 from PIL import Image
 
@@ -32,9 +33,9 @@ class CustomDataset(Dataset):
         self.is_train = is_train
         
         # Get list of images and labels
-        self.samples = self._load_samples()
+        self.samples, self.classes = self._load_samples()
         
-    def _load_samples(self) -> list:
+    def _load_samples(self) -> tuple[list, int]:
         """Load image paths and corresponding labels."""
         samples = []
         class_to_idx = {}
@@ -58,7 +59,7 @@ class CustomDataset(Dataset):
                     img_path = os.path.join(class_dir, img_name)
                     samples.append((img_path, class_to_idx[class_name]))
                     
-        return samples
+        return samples, len(class_dirs)
     
     def __len__(self) -> int:
         return len(self.samples)
@@ -88,6 +89,9 @@ def get_data_loaders(
     img_size: Tuple[int, int] = (224, 224),
     num_workers: int = 4,
     train_val_split: float = 0.8,
+    use_ddp: bool = False,
+    rank: int = 0,
+    world_size: int = 1,
     **kwargs
 ) -> Dict[str, DataLoader]:
     """
@@ -99,6 +103,9 @@ def get_data_loaders(
         img_size: Size to resize images to
         num_workers: Number of subprocesses to use for data loading
         train_val_split: Fraction of data to use for training
+        use_ddp: Whether to use DistributedDataParallel
+        rank: Rank of the current process
+        world_size: Total number of processes
         
     Returns:
         dict: Dictionary containing train and val data loaders
@@ -130,13 +137,19 @@ def get_data_loaders(
     val_size = len(full_dataset) - train_size
     train_dataset, val_dataset = random_split(full_dataset, [train_size, val_size])
     
+    # Create samplers if using DDP
+    train_sampler = None
+    if use_ddp:
+        train_sampler = DistributedSampler(train_dataset, num_replicas=world_size, rank=rank)
+
     # Create data loaders
     train_loader = DataLoader(
         train_dataset,
         batch_size=batch_size,
-        shuffle=True,
+        shuffle=train_sampler is None,
         num_workers=num_workers,
-        pin_memory=True
+        pin_memory=True,
+        sampler=train_sampler
     )
     
     val_loader = DataLoader(
@@ -166,5 +179,5 @@ def get_data_loaders(
         'train': train_loader,
         'val': val_loader,
         'test': test_loader,
-        'num_classes': len(full_dataset.classes) if hasattr(full_dataset, 'classes') else 10
+        'num_classes': full_dataset.classes
     }

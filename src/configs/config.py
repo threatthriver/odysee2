@@ -3,6 +3,7 @@ Configuration settings for the deep learning project.
 """
 from dataclasses import dataclass
 from typing import Optional, List, Tuple
+import torch
 
 @dataclass
 class DataConfig:
@@ -31,6 +32,8 @@ class TrainingConfig:
     save_dir: str = "saved_models"
     log_dir: str = "logs"
     checkpoint_freq: int = 5
+    use_amp: bool = True
+    accumulation_steps: int = 1
     
 @dataclass
 class Config:
