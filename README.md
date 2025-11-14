@@ -94,10 +94,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 📬 Contact
 
 - **GitHub**: [@threatthriver](https://github.com/threatthriver)
-- **Email**: [Your Email]
+- **Email**: [aniketkumar34@outlook.com]
 
 ---
 
 <div align="center">
-  Made with ❤️ by [**Aniket Kumar**] | 2025
+  Made with ❤️ by [*Aniket Kumar*] | 2025
 </div>
